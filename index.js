@@ -46,6 +46,22 @@ app.get('/users', (req, res) =>{
   res.send({users});
 })
 
+app.get('/users/:id', (req, res) =>{
+  let id = req.params.id;
+
+  let user = users.find((user) =>{
+    return user.id === id;
+  })
+
+  if(user){
+    res.status(200).json(user)
+    return;
+  } else{
+    res.status(400).end();
+    return;
+  }
+})
+
 app.post('/users', (req, res) =>{
   let user = req.body;
 
@@ -54,6 +70,7 @@ app.post('/users', (req, res) =>{
     return;
   }
 
+  user.id = uuid.v4();
   users.push(user);
   saveUser();
   res.status(201).send(user);
@@ -95,6 +112,30 @@ app.post('/chatrooms', (req, res) =>{
   res.status(201).send(chatroom);
 })
 
+app.post('/chatrooms/:id/users', (req, res) =>{
+  let body = req.body;
+  let id = req.params.id;
+
+  if(!body.users){
+    res.status(400).end();
+    return;
+  }
+
+  let chatroomIndex = chatrooms.findIndex( (chatroom) =>{
+    return chatroom.id === id;
+  })
+
+  if(chatroomIndex === -1){
+    res.status(400).end();
+    return;
+  }
+
+  chatrooms[chatroomIndex].users.push(body)
+  res.status(200).send(body);
+  saveChatroom();
+  return;
+})
+
 app.post('/chatrooms/:id/chat', (req, res) =>{
   let id = req.params.id;
   let message = req.body;
@@ -119,8 +160,26 @@ app.post('/chatrooms/:id/chat', (req, res) =>{
   saveChatroom()
 })
 
+app.delete('/users/:id', (req, res) =>{
+  let id = req.params.id;
+
+  let userIndex = users.findIndex((user) =>{
+    return user.id === id;
+  })
+
+  if(userIndex === -1){
+    res.status(400).end();
+    return;
+  }
+
+  users.splice(userIndex, 1);
+  saveUser();
+  res.status(200).end();
+
+})
+
 app.delete('/chatrooms/:id', (req, res) =>{
-  let id = req.params.id
+  let id = req.params.id;
   
   let chatroomIndex = chatrooms.findIndex( (chatroom) =>{
     return chatroom.id === id;
@@ -135,7 +194,6 @@ app.delete('/chatrooms/:id', (req, res) =>{
   saveChatroom();
   res.status(200).end();
 })
-
 
 io.on('connection', (socket) =>{
   console.log('a user connected');
