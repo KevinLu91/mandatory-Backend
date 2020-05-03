@@ -6,7 +6,7 @@ import styled from 'styled-components';
 
 import { username$, updateUsername } from './Observables/Store.js'
 import Chatrooms from './Chatrooms';
-import Users from './Users';
+
 
 const socket = io('http://localhost:8080');
 
@@ -63,15 +63,42 @@ const Container = styled.div`
     display:flex;
     position: fixed;
     bottom: 30px;
-    width: 65%;
+    width: 50%;
     height: 10%;
-    right: 10%;
+    right: 20%;
   }
 
   form input{
     display:flex;
     width: 100%;
   }
+
+  .chatUser_container{
+    width: 200px;
+    background: #3f0e40;
+    color: #a892a8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-top: 1px solid #9f87a0;
+  }
+
+  .user_online{
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: start;
+  }
+
+  .online{
+    margin: 12px 10px 8px 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: green;
+  }
+
+
 `
 
 function Home() {
@@ -79,7 +106,9 @@ function Home() {
   const [message, setMessage] = useState('');
   const [id, setId] = useState('');
   const [validation, setValidation] = useState(true);
-  const [activeUser, setActiveUser] = useState(null);
+  const [name] = useState(username$.value);
+  const [chatUsers, setChatUsers] = useState([]);
+
   
   useEffect(() => { 
     if(chatroom){
@@ -95,10 +124,26 @@ function Home() {
     return () =>{
       socket.off('new_message')
     }
+  },[chatroom])
 
-  }, [chatroom])
+  useEffect(() =>{
+    
+    if(chatroom){
+      socket.emit('join', ({ name, room: chatroom.channel }))
+    }
+       socket.on('roomData', ({users}) =>{
+        setChatUsers(users)
+      }) 
+    return () =>{
+      socket.off('roomData')
+    }
+  }, [chatroom, name])
 
-  
+  useEffect(() =>{
+    socket.emit('leave')
+  },[id])
+ 
+
 
   if(!username$.value || !validation){
     return <Redirect to='/Login' />
@@ -107,20 +152,21 @@ function Home() {
   function handleLogOut(){
     updateUsername(null);
     setValidation(false);
+    socket.emit('leave', ({ name, room: chatroom.channel}))
   }
     
   function handleJoinChannel(e){
+    
     setId(e.target.dataset.id) 
-
+    
     axios.get(`/chatrooms/${e.target.dataset.id}`)
     .then( (res) =>{
       setChatroom(res.data);
-      console.log(res.data);
-
     })
     .catch( (err) =>{
       console.log(err);
     }) 
+
   }
 
   function handleMessage(e){
@@ -170,7 +216,15 @@ function Home() {
           }
           </div>  
        </div>
-       
+      <div className='chatUser_container'>
+        <h3>Channel users:</h3>
+        {chatUsers ? chatUsers.map( (x,i) =>(
+          x.room === chatroom.channel ?
+          <div key={i} className='user_online'>
+            <div className='online'></div><h3>{x.name}</h3>
+          </div> : null
+        )): null}
+      </div>
       </main>
     </Container>
   );

@@ -81,14 +81,10 @@ const Container = styled.aside`
   }
 `
 
-const modal = styled.aside`
-  
-`
-
 function Chatrooms(props) {
   const [channels, setChannels] = useState([]);
   const [createChannel, setCreateChannel] = useState(false);
-
+  
   useEffect(() => {
     axios.get('/chatrooms')
       .then( (res) =>{
@@ -104,10 +100,9 @@ function Chatrooms(props) {
   }
 
   function handleDeleteChatroom (e){
-    console.log(e.target.dataset.id)
+    
     axios.delete(`/chatrooms/${e.target.dataset.id}`)
       .then( (res) =>{
-        console.log(res)
       })
       .catch( (err) =>{
         console.log(err);

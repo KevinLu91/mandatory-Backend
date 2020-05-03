@@ -3,10 +3,12 @@ const fs = require('fs');
 const uuid = require('uuid');
 const chatrooms = require('./chatrooms');
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+
+const { addUser, removeUser, getUser, getUsersInRoom } = require('./users.js');
 
 const USERS_PATH = 'users.json';
 
@@ -195,9 +197,44 @@ app.delete('/chatrooms/:id', (req, res) =>{
   res.status(200).end();
 })
 
+
 io.on('connection', (socket) =>{
   console.log('a user connected');
 
+  socket.on('join', ({name, room}) =>{
+    const user = addUser({ id: socket.id, name, room });
+    roomUsers = getUsersInRoom(user.room);
+    
+    roomUsers = roomUsers.filter((elem, index, self) => self.findIndex(
+      (t) => {return ( t.name === elem.name)}) === index)
+
+    socket.join(user.room);
+
+    io.to(user.room).emit('roomData', {
+      room: user.room,
+      users: roomUsers,
+    });
+
+    console.log(user)
+    
+
+  socket.on('leave', () =>{
+    const user = removeUser(socket.id);
+    if(user){
+      io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
+    }
+    console.log('leave', user)
+    })
+  })
+
+  socket.on('disconnect', () =>{
+    const user = removeUser(socket.id);
+    console.log(user)
+    if(user){
+      io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
+    }
+  })
+ 
   socket.on('new_message', (data) =>{
     socket.emit('message', data);
   });
