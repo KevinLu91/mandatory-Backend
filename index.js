@@ -107,6 +107,13 @@ app.post('/chatrooms', (req, res) =>{
     return;
   }
 
+  for(let i = 0; i < chatrooms.length; i++){
+    if(chatrooms[i].channel === chatroom.channel){
+      res.status(400).end();
+      return;
+    }
+  }
+
   chatroom.id = uuid.v4();
   chatroom.messages = [];
   chatrooms.push(chatroom);
